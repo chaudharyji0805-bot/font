@@ -1,0 +1,18 @@
+{
+  "name": "telegram-font-bot",
+  "description": "Telegram Font / Style Bot deployed on Heroku",
+  "repository": "https://github.com/chaudharyji0805-bot/fon",
+  "logo": "https://telegra.ph/file/3c0c3b5c2b3c9b0b9c8a5.png",
+  "keywords": ["telegram", "bot", "fonts", "heroku", "nodejs"],
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Your Telegram Bot Token from @BotFather",
+      "required": true
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
