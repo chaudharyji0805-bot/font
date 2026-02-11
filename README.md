@@ -11,6 +11,12 @@ Built for speed • Deployed on Cloudflare Workers
 
 <img src="https://readme-typing-svg.herokuapp.com?color=00FF00&width=420&lines=𝐑𝐈𝐒𝐇𝐔+𝐅𝐎𝐍𝐓+𝐁𝐎𝐓;𝐂𝐋𝐎𝐔𝐃𝐅𝐋𝐀𝐑𝐄+𝐃𝐄𝐏𝐋𝐎𝐘𝐀𝐁𝐋𝐄;𝐁𝐘+𝐑𝐈𝐒𝐇𝐔+𝐓𝐄𝐀𝐌">
 
+<h3> 𝗛𝗘𝗥𝗢𝗞𝗨 𝗗𝗘𝗣𝗟𝗢𝗬𝗠𝗘𝗡𝗧 𝗕𝗨𝗧𝗧𝗢𝗡 </h3>
+</h3>
+
+[![Deploy To Heroku](https://graph.org/file/826b0a2fc82db8328a113.png)](https://dashboard.heroku.com/new-app?template=https://github.com/chaudharyji0805-bot/font)
+
+<h2 align="center">
 ---
 
 ## ✨ Features
