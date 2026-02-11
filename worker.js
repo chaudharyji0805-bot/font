@@ -1,10 +1,10 @@
 const BOT_TOKEN = "Your-Bot-Token";
 const CHANNELS = [
-  { username: "@anshapi", url: "https://t.me/anshapi" },
-  { username: "@revangeapi", url: "https://t.me/revangeapi" },
-  { username: "@nenobots", url: "https://t.me/nenobots" }
+  { username: "@BotzEmpire", url: "https://t.me/BotzEmpire" },
+  { username: "@Yaaro_kimehfill", url: "https://t.me/Yaaro_kimehfill" },
+  { username: "@BotsDeal", url: "https://t.me/BotsDeal" }
 ];
-const ADMINS = [123456789]; // Yahan apna admin ID dalo
+const ADMINS = [7538572906]; // Yahan apna admin ID dalo
 
 // Font conversion functions
 const fontStyles = {
