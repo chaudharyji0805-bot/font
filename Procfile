@@ -1,1 +1,1 @@
-web: npm start
+worker: python start.py
