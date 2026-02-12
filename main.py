@@ -9,6 +9,8 @@ from telegram.ext import (
     CallbackQueryHandler, InlineQueryHandler, ContextTypes, filters
 )
 from config import BOT_TOKEN, FORCE_CHANNELS, ADMINS
+from pymongo import MongoClient
+from config import MONGO_URI, DB_NAME
 
 # ================== DATABASE ==================
 conn = sqlite3.connect("bot.db", check_same_thread=False)
