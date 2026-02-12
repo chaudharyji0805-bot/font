@@ -1,19 +1,49 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-from config import BOT_TOKEN, FORCE_CHANNELS
+from config import BOT_TOKEN, FORCE_CHANNELS, ADMINS, WATERMARK
 
-# ---- Simple Font Styles ----
+# ---- 20+ Stylish Fonts ----
+def map_chars(text, base):
+    out = ""
+    for c in text:
+        if "a" <= c <= "z":
+            out += chr(ord(c) - 97 + base)
+        elif "A" <= c <= "Z":
+            out += chr(ord(c) - 65 + base - 26)
+        else:
+            out += c
+    return out
+
 FONTS = [
     ("Normal", lambda t: t),
-    ("Bold", lambda t: "".join(chr(ord(c) + 0x1D3BF) if "a" <= c <= "z" else c for c in t)),
-    ("Italic", lambda t: "".join(chr(ord(c) + 0x1D3F3) if "a" <= c <= "z" else c for c in t)),
-    ("Monospace", lambda t: "".join(chr(ord(c) + 0x1D68A) if "a" <= c <= "z" else c for c in t)),
+    ("Bold", lambda t: map_chars(t, 0x1D400)),
+    ("Italic", lambda t: map_chars(t, 0x1D434)),
+    ("Bold Italic", lambda t: map_chars(t, 0x1D468)),
+    ("Monospace", lambda t: map_chars(t, 0x1D670)),
+    ("Script", lambda t: map_chars(t, 0x1D49C)),
+    ("Fraktur", lambda t: map_chars(t, 0x1D504)),
+    ("Double", lambda t: map_chars(t, 0x1D538)),
+    ("Sans", lambda t: map_chars(t, 0x1D5A0)),
+    ("Sans Bold", lambda t: map_chars(t, 0x1D5D4)),
+    ("Sans Italic", lambda t: map_chars(t, 0x1D608)),
+    ("Sans BI", lambda t: map_chars(t, 0x1D63C)),
+    ("SmallCaps", lambda t: t.lower()),
+    ("Bubble", lambda t: "".join(f"{c}⃝" if c.isalnum() else c for c in t)),
+    ("Strike", lambda t: "".join(c + "̶" if c != " " else c for c in t)),
+    ("Underline", lambda t: "".join(c + "̲" if c != " " else c for c in t)),
+    ("Wide", lambda t: " ".join(list(t))),
+    ("Reverse", lambda t: t[::-1]),
+    ("Leet", lambda t: t.replace("a","4").replace("e","3").replace("i","1").replace("o","0")),
+    ("Dots", lambda t: "•".join(list(t))),
+    ("Hearts", lambda t: "❤".join(list(t))),
 ]
 
-# ---- In-memory user state ----
-USER_STATE = {}  # user_id: {"text": str, "idx": int}
+# ---- In-memory DB ----
+USER_STATE = {}      # user_id: {"text": str, "idx": int}
+USER_FAV = {}        # user_id: idx
+ALL_USERS = set()    # for broadcast
 
-# ---- Helper: check user joined all channels or not ----
+# ---- Force Join Check ----
 async def is_user_joined(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     bot = context.bot
@@ -26,35 +56,17 @@ async def is_user_joined(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return False
     return True
 
-# ---- Send Force Join Message ----
 async def send_force_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [[InlineKeyboardButton(f"Join {ch}", url=f"https://t.me/{ch.lstrip('@')}")] for ch in FORCE_CHANNELS]
     buttons.append([InlineKeyboardButton("✅ Joined, Retry", callback_data="retry_join")])
-    msg = (
-        "🚫 Bhai pehle in channels ko join kar:\n\n"
-        "👉 Join karne ke baad **Joined, Retry** pe click kar.\n\n"
-        "Phir bot use kar paayega 😎"
-    )
+    msg = "🚫 Bhai pehle channels join kar:\n\nJoin karke **Joined, Retry** dabaa 😎"
     markup = InlineKeyboardMarkup(buttons)
     if update.message:
-        await update.message.reply_text(msg, reply_markup=markup, parse_mode="Markdown")
+        await update.message.reply_text(msg, reply_markup=markup)
     elif update.callback_query:
-        await update.callback_query.message.reply_text(msg, reply_markup=markup, parse_mode="Markdown")
+        await update.callback_query.message.reply_text(msg, reply_markup=markup)
 
-# ---- /start ----
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_user_joined(update, context):
-        await send_force_join(update, context)
-        return
-    msg = (
-        "🔥 Welcome bhai!\n\n"
-        "🤖 Ye Font / Style Bot hai.\n"
-        "✍️ Bas apna text bhej, main usko stylish bana dunga.\n\n"
-        "👇 Abhi koi bhi text bhej ke try kar!"
-    )
-    await update.message.reply_text(msg)
-
-# ---- Render current font ----
+# ---- Render ----
 def render_text(user_id: int):
     state = USER_STATE[user_id]
     text = state["text"]
@@ -64,8 +76,7 @@ def render_text(user_id: int):
         styled = fn(text)
     except Exception:
         styled = text
-    header = f"✨ Style: {name}\n\n"
-    return header + styled
+    return f"✨ Style: {name}\n\n{styled}{WATERMARK}"
 
 def nav_keyboard():
     return InlineKeyboardMarkup([
@@ -73,24 +84,46 @@ def nav_keyboard():
             InlineKeyboardButton("⬅️ Prev", callback_data="prev"),
             InlineKeyboardButton("➡️ Next", callback_data="next"),
         ],
-        [InlineKeyboardButton("📋 Copy", callback_data="copy")]
+        [
+            InlineKeyboardButton("⭐ Save", callback_data="save"),
+            InlineKeyboardButton("📋 Copy", callback_data="copy"),
+        ]
     ])
 
-# ---- Text handler ----
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        return
+# ---- Commands ----
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_joined(update, context):
         await send_force_join(update, context)
         return
 
     user_id = update.effective_user.id
-    USER_STATE[user_id] = {"text": update.message.text, "idx": 0}
+    ALL_USERS.add(user_id)
+
+    fav = USER_FAV.get(user_id)
+    msg = "🔥 Welcome bhai!\n\n✍️ Text bhej, main stylish bana dunga."
+    if fav is not None:
+        msg += f"\n⭐ Tera saved style: {FONTS[fav][0]}"
+    await update.message.reply_text(msg)
+
+# ---- Text Handler ----
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    if not await is_user_joined(update, context):
+        await send_force_join(update, context)
+        return
+
+    user_id = update.effective_user.id
+    ALL_USERS.add(user_id)
+
+    start_idx = USER_FAV.get(user_id, 0)
+    USER_STATE[user_id] = {"text": update.message.text, "idx": start_idx}
 
     out = render_text(user_id)
     await update.message.reply_text(out, reply_markup=nav_keyboard())
 
-# ---- Callback buttons ----
+# ---- Callback ----
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -98,10 +131,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "retry_join":
         if not await is_user_joined(update, context):
-            await query.edit_message_text("❌ Abhi bhi join nahi kiya bhai. Pehle join kar phir retry kar.")
+            await query.edit_message_text("❌ Pehle join kar bhai.")
             await send_force_join(update, context)
             return
-        await query.edit_message_text("✅ Verified! Ab koi text bhej.")
+        await query.edit_message_text("✅ Verified! Ab text bhej.")
         return
 
     if user_id not in USER_STATE:
@@ -112,8 +145,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         USER_STATE[user_id]["idx"] += 1
     elif query.data == "prev":
         USER_STATE[user_id]["idx"] -= 1
+    elif query.data == "save":
+        USER_FAV[user_id] = USER_STATE[user_id]["idx"] % len(FONTS)
+        await query.answer("⭐ Style saved!", show_alert=True)
     elif query.data == "copy":
-        # Telegram me direct copy button nahi hota, same text resend kar dete hain
         out = render_text(user_id)
         await query.message.reply_text(out)
         return
@@ -121,10 +156,33 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     out = render_text(user_id)
     await query.edit_message_text(out, reply_markup=nav_keyboard())
 
-# ---- Build app ----
+# ---- Admin Broadcast ----
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMINS:
+        await update.message.reply_text("❌ Tu admin nahi hai bhai.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /broadcast message")
+        return
+
+    msg = " ".join(context.args)
+    sent = 0
+    for uid in list(ALL_USERS):
+        try:
+            await context.bot.send_message(chat_id=uid, text=msg)
+            sent += 1
+        except Exception:
+            pass
+
+    await update.message.reply_text(f"✅ Broadcast sent to {sent} users.")
+
+# ---- Build App ----
 def build_app():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(CallbackQueryHandler(handle_callback))
     return app
