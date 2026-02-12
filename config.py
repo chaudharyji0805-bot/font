@@ -1,6 +1,11 @@
 import os
 
-BOT_TOKEN = os.getenv("BOT_TOKEN") or "PASTE_YOUR_BOT_TOKEN"
+# Bot Token (Heroku Config Vars se aayega)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+# MongoDB (Heroku Config Vars se)
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "tujsebot")
 
 # Force join channels
 FORCE_CHANNELS = [
@@ -9,11 +14,8 @@ FORCE_CHANNELS = [
     "@BotsDeal"
 ]
 
-# Admin IDs (apna Telegram ID daal)
+# Admin IDs (apna Telegram ID)
 ADMINS = [7538572906]
 
-MONGO_URI = ""
-DB_NAME = "mnogo"
-
-# Watermark / Credits
+# Watermark / Credits (empty = no watermark)
 WATERMARK = ""
