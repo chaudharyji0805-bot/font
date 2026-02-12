@@ -12,8 +12,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(msg)
 
-# Normal text handler
+# Normal text handler (SAFE)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
     text = update.message.text
     reply = f"✨ Tera text mil gaya:\n{text}"
     await update.message.reply_text(reply)
