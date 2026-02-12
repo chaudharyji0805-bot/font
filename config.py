@@ -2,9 +2,8 @@ import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN") or "PASTE_YOUR_BOT_TOKEN_HERE"
 
-# Agar future me channels/admins chahiye ho:
-ADMINS = [7538572906]
-CHANNELS = [
+# Jinko join karna mandatory hai
+FORCE_CHANNELS = [
     "@BotzEmpire",
     "@Yaaro_kimehfill",
     "@BotsDeal"
