@@ -13,34 +13,35 @@ from pymongo import MongoClient
 from config import MONGO_URI, DB_NAME
 
 # ================== DATABASE ==================
-conn = sqlite3.connect("bot.db", check_same_thread=False)
-cur = conn.cursor()
-cur.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY,
-    fav_style INTEGER DEFAULT 0
-)
-""")
-conn.commit()
+# ================== MONGODB ==================
+mongo = MongoClient(MONGO_URI)
+db = mongo[DB_NAME]
+users_col = db["users"]
 
 def add_user(user_id: int):
-    cur.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
-    conn.commit()
+    users_col.update_one(
+        {"_id": user_id},
+        {"$setOnInsert": {"fav_style": 0}},
+        upsert=True
+    )
 
 def set_fav(user_id: int, idx: int):
     add_user(user_id)
-    cur.execute("UPDATE users SET fav_style=? WHERE user_id=?", (idx, user_id))
-    conn.commit()
+    users_col.update_one(
+        {"_id": user_id},
+        {"$set": {"fav_style": idx}}
+    )
 
 def get_fav(user_id: int):
-    add_user(user_id)
-    cur.execute("SELECT fav_style FROM users WHERE user_id=?", (user_id,))
-    row = cur.fetchone()
-    return row[0] if row else 0
+    u = users_col.find_one({"_id": user_id})
+    if not u:
+        add_user(user_id)
+        return 0
+    return u.get("fav_style", 0)
 
 def total_users():
-    cur.execute("SELECT COUNT(*) FROM users")
-    return cur.fetchone()[0]
+    return users_col.count_documents({})
+
 
 # ================== FONT HELPERS ==================
 def map_chars(text, base):
