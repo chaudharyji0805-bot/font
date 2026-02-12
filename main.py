@@ -1,8 +1,46 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+import sqlite3
+from uuid import uuid4
+from telegram import (
+    Update, InlineKeyboardButton, InlineKeyboardMarkup,
+    InlineQueryResultArticle, InputTextMessageContent
+)
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    CallbackQueryHandler, InlineQueryHandler, ContextTypes, filters
+)
 from config import BOT_TOKEN, FORCE_CHANNELS, ADMINS, WATERMARK
 
-# ---- 20+ Stylish Fonts ----
+# ================== DATABASE ==================
+conn = sqlite3.connect("bot.db", check_same_thread=False)
+cur = conn.cursor()
+cur.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER PRIMARY KEY,
+    fav_style INTEGER DEFAULT 0
+)
+""")
+conn.commit()
+
+def add_user(user_id: int):
+    cur.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+
+def set_fav(user_id: int, idx: int):
+    add_user(user_id)
+    cur.execute("UPDATE users SET fav_style=? WHERE user_id=?", (idx, user_id))
+    conn.commit()
+
+def get_fav(user_id: int):
+    add_user(user_id)
+    cur.execute("SELECT fav_style FROM users WHERE user_id=?", (user_id,))
+    row = cur.fetchone()
+    return row[0] if row else 0
+
+def total_users():
+    cur.execute("SELECT COUNT(*) FROM users")
+    return cur.fetchone()[0]
+
+# ================== FONTS ==================
 def map_chars(text, base):
     out = ""
     for c in text:
@@ -14,36 +52,39 @@ def map_chars(text, base):
             out += c
     return out
 
-FONTS = [
-    ("Normal", lambda t: t),
-    ("Bold", lambda t: map_chars(t, 0x1D400)),
-    ("Italic", lambda t: map_chars(t, 0x1D434)),
-    ("Bold Italic", lambda t: map_chars(t, 0x1D468)),
-    ("Monospace", lambda t: map_chars(t, 0x1D670)),
-    ("Script", lambda t: map_chars(t, 0x1D49C)),
-    ("Fraktur", lambda t: map_chars(t, 0x1D504)),
-    ("Double", lambda t: map_chars(t, 0x1D538)),
-    ("Sans", lambda t: map_chars(t, 0x1D5A0)),
-    ("Sans Bold", lambda t: map_chars(t, 0x1D5D4)),
-    ("Sans Italic", lambda t: map_chars(t, 0x1D608)),
-    ("Sans BI", lambda t: map_chars(t, 0x1D63C)),
-    ("SmallCaps", lambda t: t.lower()),
-    ("Bubble", lambda t: "".join(f"{c}⃝" if c.isalnum() else c for c in t)),
-    ("Strike", lambda t: "".join(c + "̶" if c != " " else c for c in t)),
-    ("Underline", lambda t: "".join(c + "̲" if c != " " else c for c in t)),
-    ("Wide", lambda t: " ".join(list(t))),
-    ("Reverse", lambda t: t[::-1]),
-    ("Leet", lambda t: t.replace("a","4").replace("e","3").replace("i","1").replace("o","0")),
-    ("Dots", lambda t: "•".join(list(t))),
-    ("Hearts", lambda t: "❤".join(list(t))),
-]
+CATEGORIES = {
+    "Simple": [
+        ("Normal", lambda t: t),
+        ("Wide", lambda t: " ".join(list(t))),
+        ("Reverse", lambda t: t[::-1]),
+    ],
+    "Fancy": [
+        ("Bold", lambda t: map_chars(t, 0x1D400)),
+        ("Italic", lambda t: map_chars(t, 0x1D434)),
+        ("Bold Italic", lambda t: map_chars(t, 0x1D468)),
+        ("Monospace", lambda t: map_chars(t, 0x1D670)),
+    ],
+    "Symbols": [
+        ("Bubble", lambda t: "".join(f"{c}⃝" if c.isalnum() else c for c in t)),
+        ("Strike", lambda t: "".join(c + "̶" if c != " " else c for c in t)),
+        ("Underline", lambda t: "".join(c + "̲" if c != " " else c for c in t)),
+    ],
+    "Fun": [
+        ("Dots", lambda t: "•".join(list(t))),
+        ("Hearts", lambda t: "❤".join(list(t))),
+        ("Leet", lambda t: t.replace("a","4").replace("e","3").replace("i","1").replace("o","0")),
+    ]
+}
 
-# ---- In-memory DB ----
-USER_STATE = {}      # user_id: {"text": str, "idx": int}
-USER_FAV = {}        # user_id: idx
-ALL_USERS = set()    # for broadcast
+FONTS = []
+for cat, items in CATEGORIES.items():
+    for name, fn in items:
+        FONTS.append((f"{cat} - {name}", fn))
 
-# ---- Force Join Check ----
+# ================== STATE ==================
+USER_STATE = {}  # user_id: {"text": str, "idx": int}
+
+# ================== FORCE JOIN ==================
 async def is_user_joined(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     bot = context.bot
@@ -66,7 +107,7 @@ async def send_force_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.reply_text(msg, reply_markup=markup)
 
-# ---- Render ----
+# ================== RENDER ==================
 def render_text(user_id: int):
     state = USER_STATE[user_id]
     text = state["text"]
@@ -90,22 +131,25 @@ def nav_keyboard():
         ]
     ])
 
-# ---- Commands ----
+# ================== COMMANDS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_joined(update, context):
         await send_force_join(update, context)
         return
 
     user_id = update.effective_user.id
-    ALL_USERS.add(user_id)
+    add_user(user_id)
 
-    fav = USER_FAV.get(user_id)
+    fav = get_fav(user_id)
     msg = "🔥 Welcome bhai!\n\n✍️ Text bhej, main stylish bana dunga."
-    if fav is not None:
-        msg += f"\n⭐ Tera saved style: {FONTS[fav][0]}"
+    msg += f"\n⭐ Tera saved style: {FONTS[fav][0]}"
     await update.message.reply_text(msg)
 
-# ---- Text Handler ----
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    total = total_users()
+    await update.message.reply_text(f"📊 Bot Stats:\n\n👥 Total Users: {total}")
+
+# ================== TEXT HANDLER ==================
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -115,15 +159,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
-    ALL_USERS.add(user_id)
+    add_user(user_id)
 
-    start_idx = USER_FAV.get(user_id, 0)
+    start_idx = get_fav(user_id)
     USER_STATE[user_id] = {"text": update.message.text, "idx": start_idx}
 
     out = render_text(user_id)
     await update.message.reply_text(out, reply_markup=nav_keyboard())
 
-# ---- Callback ----
+# ================== CALLBACK ==================
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -146,7 +190,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "prev":
         USER_STATE[user_id]["idx"] -= 1
     elif query.data == "save":
-        USER_FAV[user_id] = USER_STATE[user_id]["idx"] % len(FONTS)
+        idx = USER_STATE[user_id]["idx"] % len(FONTS)
+        set_fav(user_id, idx)
         await query.answer("⭐ Style saved!", show_alert=True)
     elif query.data == "copy":
         out = render_text(user_id)
@@ -156,7 +201,31 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     out = render_text(user_id)
     await query.edit_message_text(out, reply_markup=nav_keyboard())
 
-# ---- Admin Broadcast ----
+# ================== INLINE MODE ==================
+async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.inline_query.query
+    if not query:
+        return
+
+    results = []
+    for name, fn in FONTS[:12]:
+        try:
+            styled = fn(query)
+        except Exception:
+            styled = query
+
+        results.append(
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=name,
+                input_message_content=InputTextMessageContent(styled + WATERMARK),
+                description=styled[:50]
+            )
+        )
+
+    await update.inline_query.answer(results, cache_time=1)
+
+# ================== ADMIN BROADCAST ==================
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMINS:
@@ -169,7 +238,10 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = " ".join(context.args)
     sent = 0
-    for uid in list(ALL_USERS):
+
+    cur.execute("SELECT user_id FROM users")
+    rows = cur.fetchall()
+    for (uid,) in rows:
         try:
             await context.bot.send_message(chat_id=uid, text=msg)
             sent += 1
@@ -178,11 +250,13 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"✅ Broadcast sent to {sent} users.")
 
-# ---- Build App ----
+# ================== BUILD APP ==================
 def build_app():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(CallbackQueryHandler(handle_callback))
+    app.add_handler(InlineQueryHandler(inline_query))
     return app
