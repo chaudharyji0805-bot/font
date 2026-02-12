@@ -13,4 +13,4 @@ FORCE_CHANNELS = [
 ADMINS = [7538572906]
 
 # Watermark / Credits
-WATERMARK = "\n\n— ✨@medevu"
+WATERMARK = ""
