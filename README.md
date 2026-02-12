@@ -1,5 +1,5 @@
 <h1 align="center">
-🔥 𝐑𝐈𝐒𝐇𝐔 𝐅𝐎𝐍𝐓 𝐁𝐎𝐓 🔥
+🔥  𝐅𝐎𝐍𝐓 𝐁𝐎𝐓 🔥
 </h1>
 
 <p align="center">
@@ -9,7 +9,7 @@ Built for speed • Deployed on Cloudflare Workers
 
 <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif">
 
-<img src="https://readme-typing-svg.herokuapp.com?color=00FF00&width=420&lines=𝐑𝐈𝐒𝐇𝐔+𝐅𝐎𝐍𝐓+𝐁𝐎𝐓;𝐂𝐋𝐎𝐔𝐃𝐅𝐋𝐀𝐑𝐄+𝐃𝐄𝐏𝐋𝐎𝐘𝐀𝐁𝐋𝐄;𝐁𝐘+𝐑𝐈𝐒𝐇𝐔+𝐓𝐄𝐀𝐌">
+<img src="https://readme-typing-svg.herokuapp.com?color=00FF00&width=420&lines=𝐑𝐈𝐒𝐇𝐔+𝐅𝐎𝐍𝐓+𝐁𝐎𝐓;𝐂𝐋𝐎𝐔𝐃𝐅𝐋𝐀𝐑𝐄+𝐃𝐄𝐏𝐋𝐎𝐘𝐀𝐁𝐋𝐄;𝐁𝐘+DEVA">
 
 <h3> 𝗛𝗘𝗥𝗢𝗞𝗨 𝗗𝗘𝗣𝗟𝗢𝗬𝗠𝗘𝗡𝗧 𝗕𝗨𝗧𝗧𝗢𝗡 </h3>
 </h3>
