@@ -1,7 +1,12 @@
 import sqlite3
 
-conn = sqlite3.connect("bot.db", check_same_thread=False)
-cur = conn.cursor()
+for u in users_col.find({}, {"_id": 1}):
+    uid = u["_id"]
+    try:
+        await context.bot.send_message(uid, msg)
+        sent += 1
+    except:
+        pass
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
