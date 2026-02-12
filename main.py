@@ -15,7 +15,7 @@ from config import MONGO_URI, DB_NAME
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 MONGO_URI = os.environ.get("MONGO_URI")
-DB_NAME = os.environ.get("DB_NAME", "telegramotp000")  # default naam agar na set ho
+DB_NAME = os.environ.get("DB_NAME", "fontbot")  # default naam agar na set ho
 
 # Mongo connect
 mongo = MongoClient(MONGO_URI)
