@@ -4,16 +4,20 @@ from config import BOT_TOKEN
 
 # /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bhai Font Bot online hai! Text bhej.")
+    msg = (
+        "🔥 Welcome bhai!\n\n"
+        "🤖 Ye *Font / Style Bot* hai.\n"
+        "✍️ Bas apna text bhej, main usko stylish fonts me convert karke de dunga.\n\n"
+        "👇 Abhi koi bhi text bhej ke try kar!"
+    )
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 # Normal text handler
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    # Abhi simple echo + style demo
-    reply = f"🔥 Tera text:\n{text}"
-
-    # Yahin pe baad me tu apna font convert logic laga sakta hai
+    # Abhi simple reply (baad me yahin font logic aayega)
+    reply = f"✨ Tera text mil gaya:\n{text}\n\n(Abhi font logic add karenge 😉)"
     await update.message.reply_text(reply)
 
 def build_app():
