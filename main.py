@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from uuid import uuid4
 from telegram import (
@@ -11,6 +12,15 @@ from telegram.ext import (
 from config import BOT_TOKEN, FORCE_CHANNELS, ADMINS
 from pymongo import MongoClient
 from config import MONGO_URI, DB_NAME
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+MONGO_URI = os.environ.get("MONGO_URI")
+DB_NAME = os.environ.get("DB_NAME", "telegramotp000")  # default naam agar na set ho
+
+# Mongo connect
+mongo = MongoClient(MONGO_URI)
+db = mongo[DB_NAME]
+users_col = db["users"]
 
 # ================== DATABASE ==================
 # ================== MONGODB ==================
