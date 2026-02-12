@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from config import BOT_TOKEN, FORCE_CHANNELS
 
 # ---- Helper: check user joined all channels or not ----
@@ -20,7 +20,12 @@ async def is_user_joined(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def send_force_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = []
     for ch in FORCE_CHANNELS:
-        buttons.append([InlineKeyboardButton(f"Join {ch}", url=f"https://t.me/{ch.lstrip('@')}")])
+        buttons.append([
+            InlineKeyboardButton(
+                f"Join {ch}",
+                url=f"https://t.me/{ch.lstrip('@')}"
+            )
+        ])
 
     buttons.append([InlineKeyboardButton("✅ Joined, Retry", callback_data="retry_join")])
 
@@ -30,10 +35,12 @@ async def send_force_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Phir bot use kar paayega 😎"
     )
 
+    markup = InlineKeyboardMarkup(buttons)
+
     if update.message:
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
+        await update.message.reply_text(msg, reply_markup=markup, parse_mode="Markdown")
     elif update.callback_query:
-        await update.callback_query.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
+        await update.callback_query.message.reply_text(msg, reply_markup=markup, parse_mode="Markdown")
 
 # ---- /start command ----
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -49,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(msg)
 
-# ---- Text handler (SAFE + Force Join check) ----
+# ---- Text handler ----
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -74,18 +81,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text("✅ Verified! Ab bot use kar sakta hai.\n\n✍️ Ab koi text bhej.")
 
+# ---- Build app ----
 def build_app():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    app.add_handler(MessageHandler(filters.StatusUpdate.ALL, lambda u, c: None))
-    app.add_handler(MessageHandler(filters.ALL, lambda u, c: None))
-    app.add_handler(CommandHandler("retry", start))
-    app.add_handler(CommandHandler("help", start))
-    app.add_handler(CommandHandler("about", start))
-
-    from telegram.ext import CallbackQueryHandler
     app.add_handler(CallbackQueryHandler(handle_callback))
 
     return app
