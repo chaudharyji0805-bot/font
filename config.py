@@ -10,7 +10,7 @@ DB_NAME = os.getenv("DB_NAME", "fontbot")
 # Force join channels
 FORCE_CHANNELS = [
     "@BotzEmpire",
-    "@Yaaro_kimehfill",
+    "@AboutDeva",
     "@BotsDeal"
 ]
 
